@@ -1,124 +1,76 @@
-import { promises as fs, writeFile } from "fs";
-
 class ProductManager {
-  constructor() {
-    this.path = "./products.json";
-    this.products = [];
-  }
-
-  async addProduct(title, description, price, thumbnail, code, stock) {
-    const product = {
-      title,
-      description,
-      price,
-      thumbnail,
-      code,
-      stock,
-    };
-    const codeProduct = this.products.find((product) => product.code === code);
-    if (!codeProduct) {
-      if (this.products.length === 0) {
-        product.id = 1;
+  constructor(path) {
+      if (fs.existsSync(path)) {
+          this.path = path
       } else {
-        product.id = this.products[this.products.length - 1].id + 1;
+          fs.promises.writeFile(path, JSON.stringify([]))
       }
-      this.products.push(product);
-      await fs.writeFile(this.path, JSON.stringify(this.products), "utf8");
-    } else {
-      return console.log("El código no puede repetirse");
-    }
   }
 
-  async getProducts() {
-    const allProducts = await fs.readFile(this.path, "utf8");
-    let parsedProducts = JSON.parse(allProducts);
-    console.log(parsedProducts);
-    return parsedProducts;
+  getProducts = async () => await fs.promises.readFile(this.path, "utf-8")
+
+  addProduct = async ({title, description, price, thumbnail, code, stock}) => {
+
+      try {
+
+          if (!(title && description && price && thumbnail && code && stock)) return console.log("Tienes que completar todos los campos")
+
+          let array = JSON.parse(await fs.promises.readFile(this.path, "utf-8"))
+
+          if (array.filter(p => p.code === code)[0]) return console.log("Ya existe un producto con ese código")
+
+          array.push({
+              title,
+              description,
+              price,
+              thumbnail,
+              code,
+              stock,
+              id: array.length
+          })
+
+          await fs.promises.writeFile(this.path, JSON.stringify(array))
+          console.log("Producto añadido correctamente")
+
+      } catch (err){
+          console.log(err)
+      }
+
   }
 
-  async getProductById(productId) {
-    let allProducts = await this.getProducts();
-    const idProduct = allProducts.find((product) => product.id === productId);
-    if (idProduct) {
-      console.log(idProduct);
-      return idProduct;
-    } else {
-      return console.log("Not Found");
-    }
+  getProductById = async (pid) => {
+      try {
+
+          let array = JSON.parse(await fs.promises.readFile(this.path, "utf-8"))
+
+          let product = array.filter(p => p.id === pid)
+
+          if (!product[0]) return "No existe ningún producto con ese número de id"
+
+          return product[0]
+
+      } catch (err) {
+          console.log(err)
+      }
   }
 
-  async updateById({ id, ...product }) {
-    await this.deleteById(id);
-    let oldProduct = await this.getProducts();
+  updateProduct = async ({pid, title, description, price, code, stock, thumbnail}) => {
 
-    let updatedProduct = [{ id, ...product }, ...oldProduct];
-    await fs.writeFile(this.path, JSON.stringify(updatedProduct), "utf8");
-  }
+      try {
 
-  async deleteById(id) {
-    let products = await fs.readFile(this.path, "utf8");
-    let allProducts = JSON.parse(products);
-    let deletedProduct = allProducts.filter((product) => product.id !== id);
-    await fs.writeFile(this.path, JSON.stringify(deletedProduct), "utf8");
+          let array = JSON.parse(await fs.promises.readFile(this.path, "utf-8"))
 
-    console.log("Producto eliminado");
-    console.log(deletedProduct);
-  }
-}
+          let product = array.filter(p => p.id === pid)
 
-//------------------------TEST----------------------------------------
-const product = new ProductManager();
-product.addProduct(
-  "Producto prueba1",
-  "Este producto es una prueba",
-  200,
-  "Sin imagen",
-  "abc123",
-  25
-);
-product.addProduct(
-  "Producto prueba2",
-  "Este producto es una prueba",
-  200,
-  "Sin imagen",
-  "abc124",
-  25
-);
-product.addProduct(
-  "Producto prueba3",
-  "Este producto es una prueba",
-  200,
-  "Sin imagen",
-  "abc125",
-  25
-);
-product.addProduct(
-  "Producto prueba3",
-  "Este producto es una prueba",
-  200,
-  "Sin imagen",
-  "abc125",
-  25
-);
-product.addProduct(
-  "Producto prueba4",
-  "Este producto es una prueba",
-  200,
-  "Sin imagen",
-  "abc126",
-  25
-);
+          if (!product[0]) return console.log("No existe ningún producto con ese número de id")
 
-product.getProducts();
-product.getProductById(1);
-product.getProductById(7);
-product.deleteById(1);
-product.updateById({
-  title: "Producto prueba2",
-  description: "Este producto es una prueba",
-  price: 500,
-  thumbnail: "Sin imagen",
-  code: "abc129",
-  stock: 25,
-  id: 2,
-});
+          if (array.filter(p => p.code === code)[0]) return console.log("Ya existe un producto con ese código")
+
+          let updatedProduct = {
+              title: title ?? product[0].title,
+              description: description ?? product[0].description,
+              price: price ?? product[0].price,
+              code: code ?? product[0].code,
+              stock: stock ?? product[0].stock,
+              thumbnail: thumbnail ?? product[0].thumbnail,
+              id: product[0].id
